@@ -79,6 +79,324 @@ const UPGRADES = [
   { icon:'🎯', name:'Fast Spit',      desc:'Spit projectile speed +30%', apply:p=>p.spitSpd*=1.3 },
 ];
 
+// ── Audio ──
+let _audioCtx = null;
+function getAc() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+function playNote(freq, type, dur, vol, t) {
+  if (!freq) return;
+  const a = getAc(); const now = t !== undefined ? t : a.currentTime;
+  const osc = a.createOscillator(), g = a.createGain();
+  osc.type = type; osc.frequency.value = freq;
+  g.gain.setValueAtTime(vol, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  osc.connect(g); g.connect(a.destination);
+  osc.start(now); osc.stop(now + dur + 0.01);
+}
+
+function playSheepBaa(vol = 0.13) {
+  const a = getAc(), now = a.currentTime;
+  const osc = a.createOscillator(), g = a.createGain();
+  const vib = a.createOscillator(), vibG = a.createGain();
+  vib.frequency.value = 7; vibG.gain.value = 25;
+  vib.connect(vibG); vibG.connect(osc.frequency);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(380, now);
+  osc.frequency.setValueAtTime(330, now + 0.1);
+  osc.frequency.linearRampToValueAtTime(280, now + 0.4);
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(vol, now + 0.04);
+  g.gain.setValueAtTime(vol, now + 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+  osc.connect(g); g.connect(a.destination);
+  vib.start(now); osc.start(now); vib.stop(now + 0.7); osc.stop(now + 0.7);
+}
+
+function playZombieGrunt(vol = 0.09) {
+  const a = getAc(), now = a.currentTime;
+  const osc = a.createOscillator(), flt = a.createBiquadFilter(), g = a.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(80, now);
+  osc.frequency.exponentialRampToValueAtTime(35, now + 0.35);
+  flt.type = 'lowpass'; flt.frequency.value = 250;
+  g.gain.setValueAtTime(vol, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+  osc.connect(flt); flt.connect(g); g.connect(a.destination);
+  osc.start(now); osc.stop(now + 0.45);
+}
+
+function playSpit() {
+  const a = getAc(), now = a.currentTime;
+  const osc = a.createOscillator(), g = a.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(700, now);
+  osc.frequency.exponentialRampToValueAtTime(180, now + 0.07);
+  g.gain.setValueAtTime(0.08, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+  osc.connect(g); g.connect(a.destination);
+  osc.start(now); osc.stop(now + 0.1);
+}
+
+function playBurp() {
+  const a = getAc(), now = a.currentTime;
+  const osc = a.createOscillator(), g = a.createGain();
+  const lfo = a.createOscillator(), lfoG = a.createGain();
+  lfo.frequency.value = 18; lfoG.gain.value = 90;
+  lfo.connect(lfoG); lfoG.connect(osc.frequency);
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(110, now);
+  osc.frequency.linearRampToValueAtTime(40, now + 0.55);
+  g.gain.setValueAtTime(0.22, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.68);
+  osc.connect(g); g.connect(a.destination);
+  lfo.start(now); osc.start(now); lfo.stop(now + 0.72); osc.stop(now + 0.72);
+}
+
+function playPoop() {
+  const a = getAc(), now = a.currentTime;
+  const osc = a.createOscillator(), g = a.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(180, now);
+  osc.frequency.exponentialRampToValueAtTime(55, now + 0.18);
+  g.gain.setValueAtTime(0.16, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+  osc.connect(g); g.connect(a.destination);
+  osc.start(now); osc.stop(now + 0.25);
+}
+
+function playExplosion() {
+  const a = getAc(), now = a.currentTime;
+  const len = Math.floor(a.sampleRate * 0.35);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  const flt = a.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = 700;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.32, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+  src.connect(flt); flt.connect(g); g.connect(a.destination);
+  src.start(now); src.stop(now + 0.4);
+}
+
+function playPlayerHit() {
+  const a = getAc(), now = a.currentTime;
+  const osc = a.createOscillator(), g = a.createGain();
+  const vib = a.createOscillator(), vibG = a.createGain();
+  vib.frequency.value = 18; vibG.gain.value = 60;
+  vib.connect(vibG); vibG.connect(osc.frequency);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(550, now);
+  osc.frequency.linearRampToValueAtTime(180, now + 0.35);
+  g.gain.setValueAtTime(0.2, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+  osc.connect(g); g.connect(a.destination);
+  vib.start(now); osc.start(now); vib.stop(now + 0.5); osc.stop(now + 0.5);
+}
+
+function playZombieDeath() {
+  const a = getAc(), now = a.currentTime;
+  const osc = a.createOscillator(), g = a.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(90, now);
+  osc.frequency.exponentialRampToValueAtTime(25, now + 0.22);
+  g.gain.setValueAtTime(0.1, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+  osc.connect(g); g.connect(a.destination);
+  osc.start(now); osc.stop(now + 0.28);
+}
+
+function playHeartPickup() {
+  const a = getAc(), now = a.currentTime;
+  [300, 380, 480].forEach((f, i) => playNote(f, 'sine', 0.18, 0.1, now + i * 0.09));
+  setTimeout(() => playSheepBaa(0.07), 320);
+}
+
+function playStarPickup() {
+  const a = getAc(), now = a.currentTime;
+  [600, 800, 1000, 1400].forEach((f, i) => playNote(f, 'triangle', 0.12, 0.07, now + i * 0.055));
+}
+
+function playWaveStart(isBoss) {
+  const a = getAc(), now = a.currentTime;
+  if (isBoss) {
+    [65, 55, 50, 45].forEach((f, i) => playNote(f, 'sawtooth', 0.45, 0.14, now + i * 0.3));
+    setTimeout(() => playZombieGrunt(0.18), 900);
+    setTimeout(() => playZombieGrunt(0.22), 1300);
+  } else {
+    [440, 550, 660].forEach((f, i) => playNote(f, 'square', 0.08, 0.07, now + i * 0.1));
+    if (wave > 1) setTimeout(() => playSheepBaa(0.06), 380);
+  }
+}
+
+function playWaveClear() {
+  const a = getAc(), now = a.currentTime;
+  [440, 554, 659, 880].forEach((f, i) => playNote(f, 'sine', 0.22, 0.11, now + i * 0.1));
+  setTimeout(() => playSheepBaa(0.1), 450);
+}
+
+const UPGRADE_SOUNDS = {
+  'Rapid Spit': () => {
+    const a = getAc(), now = a.currentTime;
+    [0, .06, .12, .18, .24, .3].forEach(t => playNote(500 + Math.random() * 300, 'square', 0.07, 0.07, now + t));
+  },
+  'Double Spit': () => {
+    const a = getAc(), now = a.currentTime;
+    playNote(480, 'square', 0.1, 0.1, now); playNote(600, 'square', 0.1, 0.1, now + 0.06);
+  },
+  'Power Spit': () => {
+    const a = getAc(), now = a.currentTime;
+    playNote(90, 'sawtooth', 0.35, 0.22, now); playNote(180, 'sine', 0.2, 0.15, now + 0.06);
+  },
+  'Explosive Spit': () => { playExplosion(); setTimeout(() => playSheepBaa(0.05), 250); },
+  'Speedy Hooves': () => {
+    const a = getAc(), now = a.currentTime;
+    [0, .09, .18, .27, .36].forEach((t, i) => playNote(180 + i * 15, 'sawtooth', 0.09, 0.12, now + t));
+  },
+  'Extra Heart': () => { playSheepBaa(0.22); setTimeout(() => playSheepBaa(0.16), 320); },
+  'Mega Burp': () => {
+    const a = getAc(), now = a.currentTime;
+    const osc = a.createOscillator(), g = a.createGain();
+    const lfo = a.createOscillator(), lfoG = a.createGain();
+    lfo.frequency.value = 6; lfoG.gain.value = 150;
+    lfo.connect(lfoG); lfoG.connect(osc.frequency);
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(70, now);
+    osc.frequency.linearRampToValueAtTime(20, now + 1.0);
+    g.gain.setValueAtTime(0.35, now); g.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+    osc.connect(g); g.connect(a.destination);
+    lfo.start(now); osc.start(now); lfo.stop(now + 1.2); osc.stop(now + 1.2);
+  },
+  'Quick Burp': () => {
+    const a = getAc(), now = a.currentTime;
+    playNote(90, 'sawtooth', 0.18, 0.22, now); playNote(60, 'sawtooth', 0.12, 0.15, now + 0.12);
+  },
+  'Poop Power': () => {
+    const a = getAc(), now = a.currentTime;
+    playNote(140, 'sine', 0.3, 0.28, now); playNote(70, 'sine', 0.25, 0.22, now + 0.06);
+  },
+  'Long Lasting': () => {
+    const a = getAc(), now = a.currentTime;
+    [0, .35, .7].forEach((t, i) => playNote(110 - i * 15, 'sine', 0.25, 0.16, now + t));
+  },
+  'Stun Burp': () => {
+    const a = getAc(), now = a.currentTime;
+    const osc = a.createOscillator(), g = a.createGain();
+    const lfo = a.createOscillator(), lfoG = a.createGain();
+    lfo.frequency.value = 28; lfoG.gain.value = 120;
+    lfo.connect(lfoG); lfoG.connect(osc.frequency);
+    osc.type = 'sine'; osc.frequency.value = 280;
+    g.gain.setValueAtTime(0.14, now); g.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+    osc.connect(g); g.connect(a.destination);
+    lfo.start(now); osc.start(now); lfo.stop(now + 0.6); osc.stop(now + 0.6);
+  },
+  'Fast Spit': () => {
+    const a = getAc(), now = a.currentTime;
+    const osc = a.createOscillator(), g = a.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(2200, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.18);
+    g.gain.setValueAtTime(0.1, now); g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    osc.connect(g); g.connect(a.destination);
+    osc.start(now); osc.stop(now + 0.22);
+  },
+};
+
+// Background music
+let bgMusicActive = false;
+let bgAmbientTimer = null;
+
+function startBgMusic() {
+  if (bgMusicActive) return;
+  bgMusicActive = true;
+  loopBgMusic();
+  scheduleAmbient();
+}
+
+function stopBgMusic() {
+  bgMusicActive = false;
+  clearTimeout(bgAmbientTimer);
+}
+
+function loopBgMusic() {
+  if (!bgMusicActive) return;
+  const a = getAc(), now = a.currentTime;
+  const tempo = 0.48;
+  const intensity = Math.min(1, wave / 8);
+
+  // Ominous bass line (D minor root movement)
+  const bassLine = [55, 55, 0, 58, 55, 0, 52, 55];
+  bassLine.forEach((f, i) => {
+    if (!f) return;
+    const osc = a.createOscillator(), g = a.createGain(), flt = a.createBiquadFilter();
+    osc.type = 'sawtooth'; osc.frequency.value = f;
+    flt.type = 'lowpass'; flt.frequency.value = 200;
+    const t = now + i * tempo;
+    g.gain.setValueAtTime(0.07 + intensity * 0.04, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + tempo * 0.9);
+    osc.connect(flt); flt.connect(g); g.connect(a.destination);
+    osc.start(t); osc.stop(t + tempo);
+  });
+
+  // Eerie melody
+  const melody = [0, 330, 0, 370, 349, 0, 330, 294];
+  melody.forEach((f, i) => {
+    if (!f) return;
+    playNote(f, 'triangle', tempo * 0.7, 0.035 + intensity * 0.02, now + i * tempo);
+  });
+
+  // Kick on even beats
+  [0, 2, 4, 6].forEach(i => {
+    const t = now + i * tempo;
+    const osc = a.createOscillator(), g = a.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(90, t);
+    osc.frequency.exponentialRampToValueAtTime(28, t + 0.1);
+    g.gain.setValueAtTime(0.14, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+    osc.connect(g); g.connect(a.destination);
+    osc.start(t); osc.stop(t + 0.2);
+  });
+
+  // Hi-hat snare on odd beats at higher waves
+  if (intensity > 0.3) {
+    [1, 3, 5, 7].forEach(i => {
+      const t = now + i * tempo;
+      const len = Math.floor(a.sampleRate * 0.06);
+      const buf = a.createBuffer(1, len, a.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let j = 0; j < len; j++) d[j] = (Math.random() * 2 - 1) * (1 - j / len);
+      const src = a.createBufferSource();
+      src.buffer = buf;
+      const flt = a.createBiquadFilter(); flt.type = 'highpass'; flt.frequency.value = 3000;
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.05 * intensity, t);
+      src.connect(flt); flt.connect(g); g.connect(a.destination);
+      src.start(t); src.stop(t + 0.07);
+    });
+  }
+
+  const loopDur = bassLine.length * tempo;
+  setTimeout(() => loopBgMusic(), (loopDur - 0.15) * 1000);
+}
+
+function scheduleAmbient() {
+  if (!bgMusicActive) return;
+  const baaDelay = 3500 + Math.random() * 5000;
+  bgAmbientTimer = setTimeout(() => {
+    if (bgMusicActive && gameState === 'playing') playSheepBaa(0.05 + Math.random() * 0.05);
+    scheduleAmbient();
+  }, baaDelay);
+  const gruntDelay = 5000 + Math.random() * 7000;
+  setTimeout(() => {
+    if (bgMusicActive && gameState === 'playing') playZombieGrunt(0.04 + Math.random() * 0.04);
+  }, gruntDelay);
+}
+
 // ── Game state ──
 let gameState = 'menu'; // menu | playing | upgrade | gameover
 let score=0, highScore=0, wave=0, kills=0;
@@ -122,6 +440,7 @@ function startWave() {
   wave++;
   waveQueue = waveComposition(wave);
   waveSpawnT = 0; waveComplete = false; bannerT = 120;
+  setTimeout(() => playWaveStart(wave % 5 === 0), 300);
 }
 
 function mkZombie(type) {
@@ -140,6 +459,7 @@ function mkZombie(type) {
 
 // ── Attacks ──
 function fireSpit() {
+  playSpit();
   player.spitCd = player.spitMaxCd;
   const spread = (player.spitCount-1)*0.3;
   for(let i=0;i<player.spitCount;i++){
@@ -151,6 +471,7 @@ function fireSpit() {
 }
 
 function fireBurp() {
+  playBurp();
   player.burpCd = player.burpMaxCd;
   burps.push({ x:player.x, y:player.y, r:0, maxR:player.burpR,
     dmg:player.burpDmg, stunDur:player.burpStun, life:25, hit:new Set() });
@@ -163,6 +484,7 @@ function fireBurp() {
 }
 
 function dropPoop() {
+  playPoop();
   player.poopCd = player.poopMaxCd;
   poopMines.push({ x:player.x, y:player.y, r:player.poopR,
     dmg:player.poopDmg, dur:player.poopDur, t:0, tickT:0 });
@@ -178,6 +500,7 @@ function hitZombie(z, dmg, stun=false, stunDur=0) {
   if (stun) z.stunT = Math.max(z.stunT, stunDur);
   if (z.hp <= 0) {
     z.dead = true;
+    playZombieDeath();
     score += z.pts;
     kills++;
     comboCount++; comboTimer = 120;
@@ -189,6 +512,7 @@ function hitZombie(z, dmg, stun=false, stunDur=0) {
 }
 
 function explodeAt(x,y) {
+  playExplosion();
   spawnParticles(x,y,'#FF8C00',20);
   shakeF=8; shakeA=5;
   burps.push({ x,y,r:0,maxR:70,dmg:1,stunDur:20,life:12,hit:new Set() });
@@ -259,10 +583,11 @@ function update() {
     if(player.invT===0 && dist(z,player)<z.r+PR){
       player.hp--;
       player.invT=90;
+      playPlayerHit();
       shakeF=14; shakeA=9;
       spawnParticles(player.x,player.y,'#FF4040',18);
       floatText(player.x,player.y-40,'OUCH!','#FF4040');
-      if(player.hp<=0){ gameState='gameover'; if(score>highScore) highScore=score; }
+      if(player.hp<=0){ gameState='gameover'; if(score>highScore) highScore=score; stopBgMusic(); }
     }
   });
 
@@ -319,8 +644,8 @@ function update() {
   powerups = powerups.filter(pw=>{
     pw.life--;
     if(dist(pw,player)<pw.r+PR){
-      if(pw.type==='heart'){ player.hp=Math.min(player.hp+1,player.maxHp); floatText(player.x,player.y-40,'❤️ +1',  '#FF5555'); }
-      else                 { score+=50; floatText(player.x,player.y-40,'+50!','#FFD700'); }
+      if(pw.type==='heart'){ player.hp=Math.min(player.hp+1,player.maxHp); floatText(player.x,player.y-40,'❤️ +1',  '#FF5555'); playHeartPickup(); }
+      else                 { score+=50; floatText(player.x,player.y-40,'+50!','#FFD700'); playStarPickup(); }
       return false;
     }
     return pw.life>0;
@@ -341,6 +666,7 @@ function update() {
   }
   if(waveComplete){
     waveCompleteT++;
+    if(waveCompleteT===1) playWaveClear();
     if(waveCompleteT===100){ pickUpgrades(); gameState='upgrade'; }
   }
 }
@@ -350,7 +676,7 @@ function pickUpgrades(){
   upgradeChoices = [...UPGRADES].sort(()=>Math.random()-0.5).slice(0,3);
 }
 
-function applyUpgrade(u){ u.apply(player); gameState='playing'; startWave(); }
+function applyUpgrade(u){ UPGRADE_SOUNDS[u.name]?.(); u.apply(player); gameState='playing'; startWave(); }
 
 // ── Draw helpers ──
 function emoji(e,x,y,sz,angle=0,alpha=1){
@@ -758,6 +1084,8 @@ function startGame(){
   zombies=[]; spits=[]; burps=[]; poopMines=[]; particles=[]; powerups=[];
   score=0; wave=0; kills=0; shakeF=0; comboCount=0; comboTimer=0;
   gameState='playing';
+  stopBgMusic();
+  startBgMusic();
   startWave();
 }
 
